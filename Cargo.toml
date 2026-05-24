@@ -1,6 +1,6 @@
 [package]
 name = "bangumi-ana-report"
-version = "1.0.0"
+version = "1.0.1"
 edition = "2021"
 description = "Bangumi 用户收藏分析报告生成器"
 authors = ["bangumi-ana-report"]

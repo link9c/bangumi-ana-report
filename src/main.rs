@@ -9,7 +9,7 @@ mod report;
 
 #[derive(Parser, Debug)]
 #[command(name = "bangumi-ana-report")]
-#[command(version = "1.0.0")]
+#[command(version = "1.0.1")]
 #[command(about = "Bangumi 用户收藏分析报告生成器", long_about = None)]
 struct Cli {
     /// Bangumi 用户名（默认使用当前登录用户）
