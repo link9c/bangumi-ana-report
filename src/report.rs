@@ -56,15 +56,30 @@ pub fn generate_html_report(
     let year_labels_json = serde_json::to_string(&year_labels).unwrap_or_default();
     let year_values_json = serde_json::to_string(&year_values).unwrap_or_default();
 
-    // Rank distribution
-    let rank_labels = serde_json::to_string(&vec!["Top 100", "Top 500", "Top 1000", "有排名", "无排名"]).unwrap_or_default();
+    // Rank distribution (non-overlapping bins)
+    let top100 = analysis.rank_distribution.top_100;
+    let top500 = analysis.rank_distribution.top_500;
+    let top1000 = analysis.rank_distribution.top_1000;
+    let ranked = analysis.rank_distribution.ranked;
+    let unranked = analysis.rank_distribution.unranked;
+
+    let rank_labels = serde_json::to_string(&vec![
+        "Top 100",
+        "101–500",
+        "501–1000",
+        "其他有排名",
+        "无排名",
+    ])
+    .unwrap_or_default();
+
     let rank_values = serde_json::to_string(&vec![
-        analysis.rank_distribution.top_100,
-        analysis.rank_distribution.top_500,
-        analysis.rank_distribution.top_1000,
-        analysis.rank_distribution.ranked,
-        analysis.rank_distribution.unranked,
-    ]).unwrap_or_default();
+        top100,
+        top500.saturating_sub(top100),
+        top1000.saturating_sub(top500),
+        ranked.saturating_sub(top1000),
+        unranked,
+    ])
+    .unwrap_or_default();
 
     // Score comparison chart data
     let score_labels: Vec<String> = analysis.hidden_gems.iter().chain(analysis.overrated.iter())
