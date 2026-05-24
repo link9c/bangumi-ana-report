@@ -189,6 +189,27 @@ pub fn generate_html_report(
     let avg_community_str = format!("{:.1}", analysis.avg_community_score);
     let avg_popularity_str = format!("{:.0}", analysis.popularity_stats.avg_collection_total);
 
+    // Prepare counts for 动画/书籍 so前端可切换三种口径
+    fn counts_for_type(analysis: &AnalysisResult, type_name: &str) -> (usize, usize, usize, usize) {
+        if let Some(map) = analysis.status_distribution.get(type_name) {
+            let total: usize = map.values().sum();
+            let wish = *map.get("想看").unwrap_or(&0);
+            let dropped = *map.get("抛弃").unwrap_or(&0);
+            let done = *map.get("看过").unwrap_or(&0);
+            (total, wish, dropped, done)
+        } else {
+            (0, 0, 0, 0)
+        }
+    }
+    let (anime_total, anime_wish, anime_dropped, anime_done) = counts_for_type(analysis, "动画");
+    let (book_total, book_wish, book_dropped, book_done) = counts_for_type(analysis, "书籍");
+    let anime_counts_json = format!(
+        r#"{{"total":{},"wish":{},"dropped":{},"done":{}}}"#,anime_total,anime_wish,anime_dropped,anime_done
+    );
+    let book_counts_json = format!(
+        r#"{{"total":{},"wish":{},"dropped":{},"done":{}}}"#,book_total,book_wish,book_dropped,book_done
+    );
+
     let template = include_str!("template.html");
 
     template
@@ -204,10 +225,11 @@ pub fn generate_html_report(
         .replace("{{AVG_POPULARITY}}", &avg_popularity_str)
         .replace("{{PRIVATE_COUNT}}", &analysis.private_count.to_string())
         .replace("{{COMMENT_COUNT}}", &analysis.comment_count.to_string())
+        .replace("{{ANIME_COUNTS}}", &anime_counts_json)
+        .replace("{{BOOK_COUNTS}}", &book_counts_json)
         .replace("{{RANK_TOP100}}", &analysis.rank_distribution.top_100.to_string())
         .replace("{{RANK_TOP500}}", &analysis.rank_distribution.top_500.to_string())
         .replace("{{RANK_TOP1000}}", &analysis.rank_distribution.top_1000.to_string())
-        .replace("{{TOP_RATED_HTML}}", &top_rated_html)
         .replace("{{SCORE_COMPARISON_HTML}}", &score_comparison_html)
         .replace("{{AI_ANALYSIS_HTML}}", &ai_html)
         .replace("{{GENERATED_TIME}}", &now)
@@ -228,6 +250,7 @@ pub fn generate_html_report(
         .replace("{{SCORE_LABELS}}", &score_labels_json)
         .replace("{{USER_SCORES}}", &user_scores_json)
         .replace("{{COMMUNITY_SCORES}}", &community_scores_json)
+        .replace("{{TOP_RATED_HTML}}", &top_rated_html)
 }
 
 fn markdown_to_html(md: &str) -> String {

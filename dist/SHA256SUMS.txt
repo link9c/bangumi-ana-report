@@ -1,0 +1,2 @@
+5266fc7cdb87395fa57fcaf65e9df3bab61641574fa9ef75ebe2ca083c98acaf  bangumi-ana-report-v1.0.0-linux-x86_64.tar.gz
+025398f2b54dcdb3ca9f1918f96f0621e2c670f8e15939f2d26a8e40db35e3b7  bangumi-ana-report-v1.0.0-windows-x86_64.zip

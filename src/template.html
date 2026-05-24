@@ -292,11 +292,31 @@
             </div>
             <div class="stat-card">
                 <div class="stat-value">{{COMPLETION_RATE}}%</div>
-                <div class="stat-label">动画完成率</div>
+                <div class="stat-label">动画完成率（按集数）</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value"><span id="animeDoneValue">--</span>%</div>
+                <div class="stat-label">动画看过占比
+                    <select id="animeDoneMode" style="margin-left:6px;background:transparent;color:var(--text-secondary);border:1px solid var(--border);border-radius:6px;padding:2px 6px;font-size:0.8rem;">
+                        <option value="all">总收藏</option>
+                        <option value="excl_wish" selected>去除想看</option>
+                        <option value="excl_wish_dropped">去除想看+抛弃</option>
+                    </select>
+                </div>
             </div>
             <div class="stat-card">
                 <div class="stat-value">{{BOOK_COMPLETION_RATE}}%</div>
-                <div class="stat-label">书籍完成率</div>
+                <div class="stat-label">书籍完成率（按卷数）</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value"><span id="bookDoneValue">--</span>%</div>
+                <div class="stat-label">书籍看过占比
+                    <select id="bookDoneMode" style="margin-left:6px;background:transparent;color:var(--text-secondary);border:1px solid var(--border);border-radius:6px;padding:2px 6px;font-size:0.8rem;">
+                        <option value="all">总收藏</option>
+                        <option value="excl_wish" selected>去除想看</option>
+                        <option value="excl_wish_dropped">去除想看+抛弃</option>
+                    </select>
+                </div>
             </div>
             <div class="stat-card">
                 <div class="stat-value">{{AVG_COMMUNITY_SCORE}}</div>
@@ -315,6 +335,12 @@
         <!-- Collection Overview -->
         <section class="section" style="animation-delay:0.1s">
             <h2>📊 收藏概览</h2>
+            <p style="color: var(--text-muted); margin-bottom: 0.75rem;">
+                注：动画完成率（按集数）统计的是“有集数信息的条目中，ep_status ≥ eps 的比例”；
+                动画看过占比（去除想看）统计的是“收藏状态为‘看过’的条目占 (总收藏 - 想看) 的比例”；
+                不含抛弃口径为“收藏状态为‘看过’的条目占 (总收藏 - 想看 - 抛弃) 的比例”。
+                两者口径不同，数值不具可比性。
+            </p>
             <div class="chart-grid">
                 <div class="chart-box">
                     <h3>收藏类型分布</h3>
@@ -383,10 +409,13 @@
                     <div class="rank-label">Top 1000</div>
                 </div>
             </div>
-            <div class="chart-box" style="margin-top:1.5rem">
-                <h3>排名分布</h3>
-                <canvas id="rankChart"></canvas>
-            </div>
+                <div class="chart-box" style="margin-top:1.5rem">
+                    <h3>排名分布</h3>
+                    <canvas id="rankChart"></canvas>
+                    <div style="margin-top:10px;color:var(--text-secondary);font-size:0.85rem;text-align:center">
+                        提示：图例点击可开关分类，悬浮显示百分比
+                    </div>
+                </div>
         </section>
 
         <!-- Top Rated -->
@@ -518,14 +547,55 @@
             options: { responsive: true, scales: { x: { grid: { display: false }, ticks: { maxRotation: 45 } }, y: { beginAtZero: true } }, plugins: { legend: { display: false } } }
         });
 
-        // Rank - Doughnut
-        new Chart(document.getElementById('rankChart'), {
+        // Rank - Doughnut (with percentage tooltips and center total)
+        const rankCtx = document.getElementById('rankChart');
+        const rankData = { labels: {{RANK_LABELS}}, datasets: [{ data: {{RANK_VALUES}}, backgroundColor: ['#fbbf24','#a78bfa','#60a5fa','#94a3b8','#475569'], borderColor: '#1e293b', borderWidth: 3, hoverOffset: 10 }] };
+        const rankCenterText = {
+            id: 'rankCenterText',
+            afterDatasetsDraw(chart, args, pluginOptions) {
+                const { ctx, data } = chart;
+                const ds = data && data.datasets && data.datasets[0];
+                if (!ds || !ds.data || ds.data.length === 0) return;
+                const meta = chart.getDatasetMeta(0);
+                if (!meta || !meta.data || meta.data.length === 0) return;
+                const total = ds.data.reduce((a, b) => a + (b || 0), 0);
+                const { x, y } = meta.data[0];
+                ctx.save();
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = '#e2e8f0';
+                ctx.font = '700 14px ' + Chart.defaults.font.family;
+                ctx.fillText('总计', x, y - 10);
+                ctx.fillStyle = '#93c5fd';
+                ctx.font = '800 18px ' + Chart.defaults.font.family;
+                ctx.fillText(String(total), x, y + 12);
+                ctx.restore();
+            }
+        };
+        new Chart(rankCtx, {
             type: 'doughnut',
-            data: {
-                labels: {{RANK_LABELS}},
-                datasets: [{ data: {{RANK_VALUES}}, backgroundColor: ['#fbbf24','#a78bfa','#60a5fa','#94a3b8','#475569'], borderColor: '#1e293b', borderWidth: 3 }]
+            data: rankData,
+            options: {
+                responsive: true,
+                cutout: '55%',
+                animation: { animateRotate: true, animateScale: true },
+                plugins: {
+                    legend: { position: 'bottom', labels: { padding: 20, usePointStyle: true } },
+                    tooltip: {
+                        callbacks: {
+                            label: (ctx) => {
+                                const label = ctx.label || '';
+                                const val = ctx.parsed || 0;
+                                const ds = ctx.dataset;
+                                const total = (ds.data || []).reduce((a,b)=>a + (b || 0), 0) || 1;
+                                const pct = ((val / total) * 100).toFixed(1);
+                                return `${label}: ${val} (${pct}%)`;
+                            }
+                        }
+                    }
+                }
             },
-            options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { padding: 20, usePointStyle: true } } }, cutout: '55%' }
+            plugins: [rankCenterText]
         });
 
         // Timeline - Line
@@ -558,6 +628,29 @@
                 el.innerHTML = tag + '<span class="count">' + counts[i] + '</span>';
                 cloud.appendChild(el);
             });
+        })();
+
+        // Switchable done ratios for 动画/书籍
+        (function() {
+            const anime = {{ANIME_COUNTS}}; // {total,wish,dropped,done}
+            const book = {{BOOK_COUNTS}};
+            function calc(done, denom) {
+                return denom > 0 ? (done / denom * 100).toFixed(1) : '0.0';
+            }
+            function update(idValue, mode, counts) {
+                let denom = counts.total;
+                if (mode === 'excl_wish') denom = counts.total - counts.wish;
+                if (mode === 'excl_wish_dropped') denom = counts.total - counts.wish - counts.dropped;
+                document.getElementById(idValue).textContent = calc(counts.done, denom);
+            }
+            const animeSel = document.getElementById('animeDoneMode');
+            const bookSel = document.getElementById('bookDoneMode');
+            // init
+            update('animeDoneValue', animeSel.value, anime);
+            update('bookDoneValue', bookSel.value, book);
+            // listeners
+            animeSel.addEventListener('change', () => update('animeDoneValue', animeSel.value, anime));
+            bookSel.addEventListener('change', () => update('bookDoneValue', bookSel.value, book));
         })();
     </script>
 </body>

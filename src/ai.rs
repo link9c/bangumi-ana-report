@@ -67,7 +67,10 @@ pub async fn get_ai_analysis(
             },
         ],
         temperature: 0.7,
-        max_tokens: 2000,
+        max_tokens: std::env::var("AI_MAX_TOKENS")
+            .ok()
+            .and_then(|s| s.parse::<u32>().ok())
+            .unwrap_or(6000),
     };
 
     let url = format!("{}/chat/completions", base_url.trim_end_matches('/'));

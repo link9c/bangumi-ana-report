@@ -196,7 +196,7 @@ pub fn analyze_collections(collections: &[UserSubjectCollection]) -> AnalysisRes
     rated_items.sort_by(|a, b| b.rating.cmp(&a.rating).then(a.name.cmp(&b.name)));
     let top_rated: Vec<RatedItem> = rated_items.into_iter().take(10).collect();
 
-    // Tag analysis
+    // Tag analysis — 默认仅统计“用户自己打的标签”（UserSubjectCollection.tags），不合并全站标签
     let mut tag_counts: HashMap<String, usize> = HashMap::new();
     for c in collections {
         if let Some(ref tags) = c.tags {
@@ -204,13 +204,14 @@ pub fn analyze_collections(collections: &[UserSubjectCollection]) -> AnalysisRes
                 *tag_counts.entry(tag.clone()).or_insert(0) += 1;
             }
         }
-        if let Some(ref subject) = c.subject {
-            if let Some(ref tags) = subject.tags {
-                for tag in tags {
-                    *tag_counts.entry(tag.name.clone()).or_insert(0) += 1;
-                }
-            }
-        }
+        // 如需加入全站标签，可在此处合并 subject.tags，并在报告中加以说明
+        // if let Some(ref subject) = c.subject {
+        //     if let Some(ref tags) = subject.tags {
+        //         for tag in tags {
+        //             *tag_counts.entry(tag.name.clone()).or_insert(0) += 1;
+        //         }
+        //     }
+        // }
     }
     let mut top_tags: Vec<(String, usize)> = tag_counts.into_iter().collect();
     top_tags.sort_by(|a, b| b.1.cmp(&a.1));
